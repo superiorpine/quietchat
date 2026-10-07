@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11253b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="QuietChat">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>QuietChat — личные сообщения</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><svg width="29" height="32" viewBox="0 0 29 32" fill="none" aria-hidden="true"><rect x="3" y="13" width="23" height="17" rx="5" stroke="currentColor" stroke-width="2.3"/><path d="M8 13V8a6.5 6.5 0 0 1 13 0v5" stroke="currentColor" stroke-width="2.3"/><circle cx="14.5" cy="21" r="2" fill="currentColor"/></svg><span>QuietChat</span></div>
+    <button id="lock" class="header-button" hidden>Закрыть</button>
+  </header>
+  <main>
+    <p id="boot-status" class="notice" role="status">Подготавливаем шифрование…</p>
+    <section id="gate" hidden aria-labelledby="gate-title">
+      <div class="eyebrow">ВАШ ЛИЧНЫЙ ПРОФИЛЬ</div>
+      <h1 id="gate-title">Начнём с ключа</h1>
+      <p id="gate-description" class="muted">Создайте пароль. Он защитит ваш ключ на этом iPhone.</p>
+      <form id="gate-form" class="card">
+        <label for="password">Пароль</label>
+        <input id="password" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required placeholder="Не менее 12 символов">
+        <div id="confirmation">
+          <label for="password-again">Повторите пароль</label>
+          <input id="password-again" type="password" autocomplete="new-password" maxlength="1024">
+        </div>
+        <button id="gate-submit" class="primary full" type="submit" disabled>Создать профиль</button>
+        <p id="gate-error" class="error" role="alert"></p>
+      </form>
+      <button id="restore" class="secondary full">У меня есть резервная копия</button>
+      <p class="small muted">Пароль нельзя сбросить. Сохраните его и сделайте резервную копию ключа.</p>
+      <div class="install-note"><strong>Установить на iPhone</strong><p>Откройте в Safari → меню «Поделиться» → «На экран “Домой”». Затем запускайте с новой иконки.</p></div>
+    </section>
+    <div id="workspace" hidden>
+      <section id="send-panel" class="panel" aria-labelledby="send-title">
+        <div class="section-head"><div><div class="eyebrow">ЛИЧНАЯ ПЕРЕПИСКА</div><h1 id="send-title">Отправить</h1></div><button id="open-key" class="text-button">Мой ключ</button></div>
+        <div class="card composer">
+          <label for="recipient">Кому</label>
+          <select id="recipient"><option value="">Добавьте друга</option></select>
+          <p id="recipient-status" class="small muted"></p>
+          <label for="draft">Ваше сообщение</label>
+          <textarea id="draft" rows="6" placeholder="Напишите то, что останется между вами…" spellcheck="true"></textarea>
+          <div class="field-actions"><button class="text-button" data-paste="draft">Вставить</button><span id="text-size" class="small muted">0 / 64 КиБ</span></div>
+          <button id="encrypt" class="primary full">Зашифровать</button>
+        </div>
+        <div id="outgoing-card" class="card result" hidden>
+          <div class="eyebrow">ГОТОВО К ОТПРАВКЕ</div>
+          <label for="outgoing">Шифротекст для друга</label>
+          <textarea id="outgoing" class="mono" rows="4" readonly spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+          <div class="two-actions"><button class="secondary" data-copy="outgoing">Копировать</button><button id="share-message" class="primary">Поделиться</button></div>
+          <button id="save-message" class="text-button full">Сохранить сообщение в файл</button>
+          <p class="small muted">В меню «Поделиться» выберите Telegram. Или вставьте скопированный текст в чат.</p>
+        </div>
+        <div id="no-contacts" class="empty"><strong>Начните с друга</strong><p>Обменяйтесь публичными ключами один раз — потом контакт останется здесь.</p><button id="first-contact" class="secondary">Добавить друга</button></div>
+      </section>
+      <section id="receive-panel" class="panel" hidden aria-labelledby="receive-title">
+        <div class="eyebrow">ВХОДЯЩЕЕ СООБЩЕНИЕ</div><h1 id="receive-title">Прочитать</h1>
+        <div class="card">
+          <label for="incoming">Шифротекст из Telegram</label>
+          <textarea id="incoming" class="mono" rows="6" placeholder="QC1:…" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+          <div class="field-actions"><button class="text-button" data-paste="incoming">Вставить</button><button id="open-message" class="text-button">Открыть файл</button><button id="clear-message" class="text-button">Очистить</button></div>
+          <button id="decrypt" class="primary full">Расшифровать</button>
+          <p id="receive-status" class="small muted" role="status">После вставки расшифруем автоматически.</p>
+        </div>
+        <div id="plaintext-card" class="card result" hidden>
+          <p id="sender" class="sender"></p>
+          <label class="sr-only" for="plaintext">Расшифрованное сообщение</label>
+          <textarea id="plaintext" class="reading" rows="6" readonly></textarea>
+          <div class="two-actions"><button class="secondary" data-copy="plaintext">Копировать</button><button id="reply" class="primary">Ответить</button></div>
+          <p class="small muted">Прочитанный текст не сохраняется в историю.</p>
+        </div>
+      </section>
+      <section id="contacts-panel" class="panel" hidden aria-labelledby="contacts-title">
+        <div class="section-head"><div><div class="eyebrow">СОХРАНЁННЫЕ КЛЮЧИ</div><h1 id="contacts-title">Друзья</h1></div><button id="add-contact" class="primary compact">Добавить</button></div>
+        <div id="contact-list"></div>
+        <p class="small muted">Перед первым сообщением сравните весь отпечаток по звонку или при встрече.</p>
+      </section>
+      <section id="settings-panel" class="panel" hidden aria-labelledby="settings-title">
+        <div class="eyebrow">НА ЭТОМ ТЕЛЕФОНЕ</div><h1 id="settings-title">Ваш профиль</h1>
+        <div class="card"><h2>Ключ и резервная копия</h2><p class="muted">Копия содержит ваш ключ и контакты. Она защищена паролем профиля.</p><button id="settings-key" class="secondary full">Мой публичный ключ</button><button id="backup" class="primary full">Сохранить резервную копию</button><p id="backup-note" class="small muted">Сохраните файл в «Файлы». Без ключа старые сообщения не восстановить.</p><button id="change-password" class="text-button full">Сменить пароль</button></div>
+        <div class="card"><h2>Установка и работа без сети</h2><p>Safari → «Поделиться» → «На экран “Домой”».</p><p id="offline-status" class="small muted" role="status">Подготавливаем работу без интернета…</p><p class="small muted">Для отправки через Telegram нужен интернет. Шифрование и чтение работают на телефоне.</p><button id="check-update" class="text-button full">Проверить обновление</button><button id="apply-update" class="secondary full" hidden>Закрыть профиль и обновить</button></div>
+        <details class="card"><summary>Что защищает приложение</summary><p>Сообщения шифруются между вашими ключами. Сервер получает запросы файлов приложения, но код не отправляет ему сообщения, пароли и ключи.</p><p>Telegram видит шифротекст и обычные данные доставки: участников, время и размер.</p><p>Здесь нет Double Ratchet и прямой секретности: утечка приватного ключа может раскрыть старые сообщения. Приложение не проходило независимый аудит.</p><p>Веб-приложение требует доверия к владельцу сайта и обновлениям кода. Защита не помогает, если телефон заражён или вы сами передали открытый текст посторонним.</p><p>Safari и приложение на главном экране могут иметь отдельные профили. Переносите профиль через зашифрованную копию.</p></details>
+        <p class="small muted footer-version">QuietChat 1.0.0 · формат QC1</p>
+      </section>
+    </div>
+    <noscript><p class="notice error">Для шифрования на телефоне включите JavaScript в Safari.</p></noscript>
+  </main>
+  <nav id="navigation" class="bottom-nav" hidden aria-label="Разделы приложения"><button data-panel="send" aria-current="page">Отправить</button><button data-panel="receive">Прочитать</button><button data-panel="contacts">Друзья</button><button data-panel="settings">Профиль</button></nav>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="key-dialog">
+    <div class="dialog-head"><h2>Мой публичный ключ</h2><button class="close-button" data-close="key-dialog" aria-label="Закрыть">×</button></div>
+    <p class="muted">Эту строку можно отправить другу.</p>
+    <label for="my-card">Публичный ключ</label><textarea id="my-card" class="mono" rows="3" readonly spellcheck="false"></textarea>
+    <div class="two-actions"><button class="secondary" data-copy="my-card">Копировать</button><button id="share-key" class="primary">Поделиться</button></div>
+    <label for="my-fingerprint">Ваш отпечаток для сверки</label><textarea id="my-fingerprint" class="mono fingerprint" rows="4" readonly></textarea><button class="text-button" data-copy="my-fingerprint">Копировать отпечаток</button>
+    <p class="small muted">Друг сравнивает его с отпечатком вашего ключа у себя. Прочитайте все группы по звонку или при встрече.</p>
+  </dialog>
+  <dialog id="contact-dialog">
+    <div class="dialog-head"><h2 id="contact-title">Добавить друга</h2><button class="close-button" data-close="contact-dialog" aria-label="Закрыть">×</button></div>
+    <form id="contact-form"><label for="contact-name">Имя друга</label><input id="contact-name" maxlength="60" autocomplete="off" required>
+      <label for="contact-card">Публичный ключ друга</label><textarea id="contact-card" class="mono" rows="3" placeholder="QCK1:…" spellcheck="false" autocapitalize="off" autocorrect="off" required></textarea><button class="text-button" data-paste="contact-card">Вставить ключ</button>
+      <label for="contact-fingerprint">Отпечаток ключа друга</label><textarea id="contact-fingerprint" class="mono fingerprint" rows="4" readonly placeholder="Вставьте полный ключ"></textarea><button class="text-button" data-copy="contact-fingerprint">Копировать отпечаток</button>
+      <p class="small muted">Друг открывает «Мой ключ» и читает свой отпечаток. Сравните все группы.</p><label class="check-label"><input id="contact-verified" type="checkbox"><span>Я сверил(а) весь отпечаток с другом</span></label>
+      <p id="contact-error" class="error" role="alert"></p><button id="save-contact" type="submit" class="primary full">Сохранить контакт</button>
+    </form>
+  </dialog>
+  <dialog id="restore-dialog">
+    <div class="dialog-head"><h2>Восстановить профиль</h2><button class="close-button" data-close="restore-dialog" aria-label="Закрыть">×</button></div>
+    <form id="restore-form"><label for="restore-file">Ваша зашифрованная копия</label><input id="restore-file" type="file" accept=".qcbkp,.qcvault,application/json" required><label for="restore-password">Пароль этой копии</label><input id="restore-password" type="password" autocomplete="current-password" maxlength="1024" required><p id="restore-error" class="error" role="alert"></p><button id="restore-submit" type="submit" class="primary full">Восстановить</button></form>
+  </dialog>
+  <dialog id="password-dialog">
+    <div class="dialog-head"><h2>Сменить пароль</h2><button class="close-button" data-close="password-dialog" aria-label="Закрыть">×</button></div>
+    <form id="password-form"><label for="new-password">Новый пароль</label><input id="new-password" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required><label for="new-password-again">Повторите пароль</label><input id="new-password-again" type="password" autocomplete="new-password" required><p class="small muted">Ключ и контакты сохранятся. Старые копии требуют старый пароль.</p><p id="password-error" class="error" role="alert"></p><button id="password-submit" class="primary full" type="submit">Сохранить пароль</button></form>
+  </dialog>
+  <input id="message-file" type="file" accept=".qcm,.txt,text/plain" hidden>
+</body>
+</html>
